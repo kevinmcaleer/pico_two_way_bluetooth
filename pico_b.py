@@ -95,7 +95,7 @@ async def receive_data_task(connection, characteristic):
         
         try:
             response_message = f"{MESSAGE}, count: {message_count}"
-            await characteristic.notified(encode_message(response_message))
+            await characteristic.notify(encode_message(response_message))
             print(f"{IAM} notified response {response_message}")
         except Exception as e:
             print(f"Error sending response  data: {e}")
@@ -123,7 +123,7 @@ async def run_peripheral_mode():
             print(f"{ble_name} connected to another device: {connection.device}")
 
             # Subscribe to notifications on the characteristic
-            await characteristic.subscribe(notification_callback)
+            await connection.subscribe(notification_callback)
             print(f"{IAM} subscribed to notifications.")
 
             tasks = [
