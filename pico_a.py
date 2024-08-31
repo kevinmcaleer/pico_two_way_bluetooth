@@ -159,7 +159,6 @@ async def run_central_mode():
 
         print(f"{IAM} connected to {connection}")
 
-
         # Discover services
         async with connection:
             try:
@@ -175,7 +174,6 @@ async def run_central_mode():
 
             tasks = [
                 asyncio.create_task(receive_data_task(characteristic)),
-
             ]
             await asyncio.gather(*tasks)
 
