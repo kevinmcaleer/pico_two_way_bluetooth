@@ -42,7 +42,7 @@ def encode_message(message):
 def decode_message(message):
     return message.decode('utf-8')
 
-async def notification_callback(characteristic, data):
+async def notification_callback(data):
     print(f"{IAM} received notification: {decode_message(data)}")
 
 async def send_data_task(connection, characteristic):
@@ -95,7 +95,7 @@ async def receive_data_task(connection, characteristic):
         
         try:
             response_message = f"{MESSAGE}, count: {message_count}"
-            await characteristic.notify(connection, encode_message(response_message))
+            await characteristic.notified(encode_message(response_message))
             print(f"{IAM} notified response {response_message}")
         except Exception as e:
             print(f"Error sending response  data: {e}")
