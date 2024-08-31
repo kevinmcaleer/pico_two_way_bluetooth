@@ -63,7 +63,7 @@ async def receive_data_task(connection, characteristic):
             break
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
-            break
+            return
 
 async def run_peripheral_mode():
     # Set up the Bluetooth service and characteristic
@@ -144,6 +144,7 @@ async def run_central_mode():
 
             await connection.disconnected()
             print(f"{ble_name} disconnected from {device.name()}")
+            return
 
 async def main():
     while True:
