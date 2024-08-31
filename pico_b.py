@@ -1,14 +1,23 @@
 import aioble
 import bluetooth
-import uasyncio as asyncio
+import struct
+import asyncio
 
 # Define UUIDs for the service and characteristic
-_SERVICE_UUID = bluetooth.UUID(0x1848) 
+_SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
+
+ble_name = "Pico B"
+ble_svc_uuid = bluetooth.UUID(0x181A)
+ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
+ble_appearance = 0x0300
+ble_advertising_interval = 2000
+
+MESSAGE = "Hello from Pico B!"
 
 async def send_data_task(connection, characteristic):
     while True:
-        message = "Hello from Pico B!"
+        message = MESSAGE
         await characteristic.write(message.encode(), response=True)
         print(f"Pico B sent: {message}")
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
@@ -23,40 +32,34 @@ async def receive_data_task(connection, characteristic):
             break
 
 async def run_pico_b():
-    # Scan for 5 seconds to find the target device (Pico A)
-    async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
-        async for result in scanner:
-            print(f"Found device: {result.name()}")
-            if result.name() == "PicoA":
-                print("Found PicoA, attempting to connect...")
-                device = result.device
-                break
-        else:
-            print("PicoA not found.")
-            return
+    # Set up the Bluetooth service and characteristic
+    ble_service = aioble.Service(ble_svc_uuid)
+    characteristic = aioble.Characteristic(
+        ble_service,
+        ble_characteristic_uuid,
+        read=True,
+        notify=True)
+    aioble.register_services(ble_service)
+    # Start advertising
 
-    try:
-        # Connect to the device
-        connection = await device.connect()
-        async with connection:
-            print("Connected to PicoA")
+    while True:
+        async with await aioble.advertise(
+            ble_advertising_interval,
+            name=ble_name,
+            services=[ble_svc_uuid],
+            appearance=ble_appearance) as connection:
+            print("Pico A connected to another device: {connection.device}")
 
-            # Find the service and characteristic on the receiver
-            service = await connection.service(_SERVICE_UUID)
-            characteristic = await service.characteristic(_CHARACTERISTIC_UUID)
+            await connection.disconnected()
+       
+        # Create tasks for sending and receiving data
+        tasks = [
+            asyncio.create_task(send_data_task(connection, characteristic)),
+            asyncio.create_task(receive_data_task(connection, characteristic)),
+        ]
+        
+        await asyncio.gather(*tasks)
 
-            # Create tasks for sending and receiving data
-            tasks = [
-                asyncio.create_task(send_data_task(connection, characteristic)),
-                asyncio.create_task(receive_data_task(connection, characteristic)),
-            ]
-            
-            await asyncio.gather(*tasks)
+asyncio.run(run_pico_b())
 
-    except Exception as e:
-        print(f"Error during connection or communication: {e}")
 
-async def main():
-    await run_pico_b()
-
-asyncio.run(main())
