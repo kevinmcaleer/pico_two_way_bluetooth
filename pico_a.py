@@ -7,13 +7,13 @@ import struct
 _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
-# Uncomment for Pico A
-IAM = "Pico A"
-IAM_SENDING_TO = "Pico B"
+# IAM = "Central" # Change to 'Peripheral' or 'Central'
+IAM = "Central"
 
-# Uncomment for Pico B
-# IAM = "Pico B"
-# IAM_SENDING_TO = "Pico A"
+if IAM == "Central":
+    IAM_SENDING_TO = "Peripheral"
+else:
+    IAM_SENDING_TO = "Central"
 
 MESSAGE = f"Hello from {IAM}!"
 
@@ -27,10 +27,9 @@ ble_scan_length = 5000
 ble_interval = 30000
 ble_window = 30000
 
-connected = False
-
-# Message count
+# state variables
 message_count = 0
+connected = False
 
 def encode_message(message):
     return message.encode('utf-8')
@@ -39,7 +38,6 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
-
 
     while True:
         if not connection:
@@ -58,26 +56,7 @@ async def send_data_task(connection, characteristic):
             break
         
         await asyncio.sleep(1)
-
-async def send_and_receive(connection, characteristic):
-    while True:
-        try:
-            data = await characteristic.read()
-        except Exception as e:
-            print(f"writing reading {e}")
-            break
-        
-        if data:
-            print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
-#                 await asyncio.sleep(1)
-            message_count += 1
-            try:
-                await characteristic.write(encode_message(message))
-            except Exception as e:        
-                print(f"writing error {e}")
-                break
             
-
 async def receive_data_task(connection, characteristic):
     global message_count
     while True:
@@ -117,8 +96,8 @@ async def run_peripheral_mode():
             print(f"{ble_name} connected to another device: {connection.device}")
 
             tasks = [
-                asyncio.create_task(send_and_receive(connection, characteristic)),
-#                 asyncio.create_task(send_data_task(connection, characteristic)),
+                # asyncio.create_task(send_and_receive(connection, characteristic)),
+                asyncio.create_task(send_data_task(connection, characteristic)),
 #                 asyncio.create_task(receive_data_task(connection, characteristic)),
             ]
             await asyncio.gather(*tasks)
@@ -174,12 +153,12 @@ async def run_central_mode():
             print(f"characteristic found: {characteristic}")
         except Exception as e:
             print(f"Error discovering characteristics: {e}")
-            await disconnection()
+            await connection.disconnection()
             continue
         
         tasks = [
             asyncio.create_task(send_data_task(connection, characteristic)),
-            asyncio.create_task(receive_data_task(connection, characteristic)),
+
         ]
         await asyncio.gather(*tasks)
 
@@ -189,13 +168,15 @@ async def run_central_mode():
 
 async def main():
     while True:
-        tasks = [
-            asyncio.create_task(run_peripheral_mode()),
-            asyncio.create_task(run_central_mode()),
-        ]
+        if IAM == "Central":    
+            tasks = [
+                asyncio.create_task(run_central_mode()),
+            ]
+        else:
+            tasks = [
+                asyncio.create_task(run_peripheral_mode()),
+            ]
         
         await asyncio.gather(*tasks)
         
 asyncio.run(main())
-
-
