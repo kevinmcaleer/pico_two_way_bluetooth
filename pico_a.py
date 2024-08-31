@@ -27,6 +27,8 @@ ble_scan_length = 5000
 ble_interval = 30000
 ble_window = 30000
 
+connected = False
+
 # Message count
 count = 0
 
@@ -53,7 +55,7 @@ async def send_data_task(connection, characteristic):
             print(f"writing error {e}")
             return
         
-        await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
+        await asyncio.sleep(1)
 
 async def receive_data_task(connection, characteristic):
     while True:
@@ -108,7 +110,7 @@ async def run_central_mode():
         device = await ble_scan()
         
         if device is None:
-            return
+            break
         print(f"device is: {device}, name is {device.name()}")
 
         try:
@@ -117,7 +119,7 @@ async def run_central_mode():
             
         except asyncio.TimeoutError:
             print("Timeout during connection")
-            return
+            break
 
         print(f"{ble_name} connected to {connection}")
 
@@ -127,10 +129,10 @@ async def run_central_mode():
             service = await connection.service(ble_svc_uuid)
         except:
             print("Timed out discovering services/characteristics")
-            return
+            break
         if not service:
             print("no service found")
-            return
+            break
         else:
             print(f"service: {service} {dir(service)}")
             characteristic = await service.characteristic(ble_characteristic_uuid)
@@ -144,7 +146,7 @@ async def run_central_mode():
 
             await connection.disconnected()
             print(f"{ble_name} disconnected from {device.name()}")
-            return
+            break
 
 async def main():
     while True:
@@ -154,5 +156,5 @@ async def main():
         ]
         
         await asyncio.gather(*tasks)
-
+        
 asyncio.run(main())
