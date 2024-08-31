@@ -1,78 +1,75 @@
-# peripheral.py
-
 import aioble
 import bluetooth
 import asyncio
-import sys
 
 # UUIDs for the service and characteristic
-_SERVICE_UUID = bluetooth.UUID(0x181A)  # Environmental Sensing Service UUID
-_CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)  # Temperature Characteristic UUID
+_SERVICE_UUID = bluetooth.UUID(0x181A)
+_CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # Device role configuration
 IAM = "Peripheral"
-MESSAGE = f"Hello from {IAM}!"
+MESSAGE = f"Hello back from {IAM}!"
 
 message_count = 0
+
+# Bluetooth parameters
+ble_name = f"Pico_{IAM}"
 
 def encode_message(message):
     return message.encode('utf-8')
 
-def decode_message(data):
-    return data.decode('utf-8')
+def decode_message(message):
+    return message.decode('utf-8')
 
-async def main():
-    # Initialize BLE
-    ble = bluetooth.BLE()
-    aioble.register_ble(ble)
+async def handle_write_request(characteristic):
+    global message_count
+    try:
+        # Try reading the data that the central wrote to the characteristic
+        data = await characteristic.read()
+        if data:
+            received_message = decode_message(data)
+            print(f"{IAM} received: {received_message}")
+            
+            # Prepare a response message
+            response_message = f"{MESSAGE}, count: {message_count}"
+            message_count += 1
+            
+            # Send the response back to the central
+            await characteristic.write(encode_message(response_message))
+            print(f"{IAM} sent response: {response_message}")
+    except Exception as e:
+        print(f"Error in handling write request: {e}")
 
-    # Create BLE service and characteristic
+async def run_peripheral_mode():
+    # Create a BLE service and characteristic
     service = aioble.Service(_SERVICE_UUID)
     characteristic = aioble.Characteristic(
         service,
         _CHARACTERISTIC_UUID,
         read=True,
-        write=True,
-        notify=True
+        write=True
     )
-    aioble.register_services(service)
 
-    print(f"{IAM}: Starting advertising...")
+    # Start advertising the service
+    print(f"{IAM} starting to advertise as {ble_name}")
 
-    # Start advertising
-    async with aioble.advertise(
-        interval_us=500_000,  # 500ms
-        services=[_SERVICE_UUID],
-        name="PicoPeripheral"
-    ) as advertisement:
-        print(f"{IAM}: Advertising now...")
+    while True:
+        async with await aioble.advertise(
+            2000,  # Advertising interval in milliseconds
+            name=ble_name,
+            services=[_SERVICE_UUID]  # Pass the UUID, not the Service object itself
+        ) as connection:
+            print(f"{IAM} connected to another device: {connection.device}")
 
-        while True:
-            # Wait for a connection
-            connection = await aioble.accept()
-            print(f"{IAM}: Connected to {connection.device}")
+            # Loop to check for data being written to the characteristic
+            while connection.is_connected():
+                await handle_write_request(characteristic)
+                await asyncio.sleep(0.5)  # Small sleep to prevent tight looping
+            
+            print(f"{IAM} disconnected")
+            break
 
-            try:
-                while True:
-                    # Wait for write requests
-                    request = await characteristic.written()
-                    if request:
-                        global message_count
-                        received_message = decode_message(request)
-                        print(f"{IAM}: Received: {received_message}")
+async def main():
+    await run_peripheral_mode()
 
-                        response_message = f"{MESSAGE}, count: {message_count}"
-                        message_count += 1
-
-                        # Send notification back to central
-                        await characteristic.notify(connection, encode_message(response_message))
-                        print(f"{IAM}: Sent response: {response_message}")
-
-            except Exception as e:
-                print(f"{IAM}: Connection error: {e}")
-            finally:
-                await connection.disconnect()
-                print(f"{IAM}: Disconnected")
-
-# Run the main event loop
 asyncio.run(main())
