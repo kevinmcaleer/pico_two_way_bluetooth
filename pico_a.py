@@ -9,7 +9,7 @@ _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # IAM = "Central" # Change to 'Peripheral' or 'Central'
-IAM = "Central"
+IAM = "Peripheral"
 
 if IAM not in ['Peripheral','Central']:
     print(f"IAM must be either Peripheral or Central")
@@ -52,6 +52,8 @@ async def send_data_task(connection, characteristic):
         if not characteristic:
             print("error no characteristic provided in send data")
             break
+        else:
+            print(f"Characteristic is {characteristic}")
         
         message = MESSAGE
         print(f"sending {message}")
@@ -59,8 +61,9 @@ async def send_data_task(connection, characteristic):
         try:
             msg = encode_message(message)
             print(f"msg {msg}")
-            await characteristic.write(msg)
-            print(f"{IAM} sent: {message}")
+            characteristic.write(msg)
+            response = await characteristic.read()
+            print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
             break
@@ -82,6 +85,12 @@ async def receive_data_task(connection, characteristic):
             break
         except Exception as e:
             print(f"Error receiving data: {e}")
+            break
+        
+        try:
+            response = await characteristic.write(message_encode("I got it"))
+        except Exception as e:
+            print(f"Error sending response  data: {e}")
             break
 
 async def run_peripheral_mode():
@@ -145,13 +154,14 @@ async def run_central_mode():
 
 
         # Discover services
-        try:
-            service = await connection.service(ble_svc_uuid)
-        except TimeoutError:
-            print("Timed out discovering services/characteristics")
-            continue
-        except Exception as e:
-            print(f"Error discovering services {e}")
+        async with connection:
+            try:
+                service = await connection.service(ble_svc_uuid)
+            except (asyncio.TimeoutError, AttributeError):
+                print("Timed out discovering services/characteristics")
+                continue
+            except Exception as e:
+                print(f"Error discovering services {e}")
         
         if not service:
             print(f"no service found {service}")
@@ -192,5 +202,7 @@ async def main():
         await asyncio.gather(*tasks)
         
 asyncio.run(main())
+
+
 
 

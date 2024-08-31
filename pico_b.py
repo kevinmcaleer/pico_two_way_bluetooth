@@ -62,7 +62,8 @@ async def send_data_task(connection, characteristic):
             msg = encode_message(message)
             print(f"msg {msg}")
             characteristic.write(msg)
-            print(f"{IAM} sent: {message}")
+            response = await characteristic.read()
+            print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
             break
@@ -84,6 +85,12 @@ async def receive_data_task(connection, characteristic):
             break
         except Exception as e:
             print(f"Error receiving data: {e}")
+            break
+        
+        try:
+            response = await characteristic.write(message_encode("I got it"))
+        except Exception as e:
+            print(f"Error sending response  data: {e}")
             break
 
 async def run_peripheral_mode():
