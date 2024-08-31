@@ -1,67 +1,78 @@
+# peripheral.py
+
 import aioble
 import bluetooth
 import asyncio
+import sys
 
 # UUIDs for the service and characteristic
-_SERVICE_UUID = bluetooth.UUID(0x1848)
-_CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
+_SERVICE_UUID = bluetooth.UUID(0x181A)  # Environmental Sensing Service UUID
+_CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)  # Temperature Characteristic UUID
 
 # Device role configuration
-IAM = "Peripheral"  # Set to "Peripheral"
-MESSAGE = f"Hello back from {IAM}!"
+IAM = "Peripheral"
+MESSAGE = f"Hello from {IAM}!"
 
 message_count = 0
-
-# Bluetooth parameters
-ble_name = f"Pico_{IAM}"
-ble_svc_uuid = bluetooth.UUID(0x181A)
-ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
 
 def encode_message(message):
     return message.encode('utf-8')
 
-def decode_message(message):
-    return message.decode('utf-8')
+def decode_message(data):
+    return data.decode('utf-8')
 
-# Handle incoming write requests from the central
-async def handle_write_request(request):
-    global message_count
-    received_message = decode_message(request.data)
-    print(f"{IAM} received: {received_message}")
-    response_message = f"{MESSAGE}, count: {message_count}"
-    message_count += 1
-    await request.characteristic.write(encode_message(response_message), response=True)
-    print(f"{IAM} sent response: {response_message}")
+async def main():
+    # Initialize BLE
+    ble = bluetooth.BLE()
+    aioble.register_ble(ble)
 
-async def run_peripheral_mode():
-    ble_service = aioble.Service(ble_svc_uuid)
+    # Create BLE service and characteristic
+    service = aioble.Service(_SERVICE_UUID)
     characteristic = aioble.Characteristic(
-        ble_service,
-        ble_characteristic_uuid,
+        service,
+        _CHARACTERISTIC_UUID,
         read=True,
         write=True,
         notify=True
     )
-    characteristic.on_write(handle_write_request)  # Register the write handler
-    aioble.register_services(ble_service)
+    aioble.register_services(service)
 
-    print(f"{IAM} starting to advertise as {ble_name}")
+    print(f"{IAM}: Starting advertising...")
 
-    while True:
-        async with await aioble.advertise(
-            2000,
-            name=ble_name,
-            services=[ble_svc_uuid]) as connection:
-            print(f"{IAM} connected to another device: {connection.device}")
+    # Start advertising
+    async with aioble.advertise(
+        interval_us=500_000,  # 500ms
+        services=[_SERVICE_UUID],
+        name="PicoPeripheral"
+    ) as advertisement:
+        print(f"{IAM}: Advertising now...")
 
-            # Keep the connection active and handle incoming requests
-            while connection.is_connected():
-                await asyncio.sleep(1)  # Short sleep to keep the loop alive
-            
-            print(f"{IAM} disconnected")
-            break
+        while True:
+            # Wait for a connection
+            connection = await aioble.accept()
+            print(f"{IAM}: Connected to {connection.device}")
 
-async def main():
-    await run_peripheral_mode()
+            try:
+                while True:
+                    # Wait for write requests
+                    request = await characteristic.written()
+                    if request:
+                        global message_count
+                        received_message = decode_message(request)
+                        print(f"{IAM}: Received: {received_message}")
 
+                        response_message = f"{MESSAGE}, count: {message_count}"
+                        message_count += 1
+
+                        # Send notification back to central
+                        await characteristic.notify(connection, encode_message(response_message))
+                        print(f"{IAM}: Sent response: {response_message}")
+
+            except Exception as e:
+                print(f"{IAM}: Connection error: {e}")
+            finally:
+                await connection.disconnect()
+                print(f"{IAM}: Disconnected")
+
+# Run the main event loop
 asyncio.run(main())
