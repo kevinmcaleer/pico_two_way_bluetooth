@@ -62,7 +62,7 @@ async def send_data_task(connection, characteristic):
             characteristic.write(msg)
             
             await asyncio.sleep(0.25)
-            response = await characteristic.read()
+            response = characteristic.read()
             
             print(f"{IAM} sent: {message}, response {response}")
         except Exception as e:
