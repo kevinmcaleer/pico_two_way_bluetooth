@@ -59,7 +59,7 @@ async def send_data_task(connection, characteristic):
         
         try:
             msg = encode_message(message)
-            await characteristic.write(msg)
+            characteristic.write(msg)
             
             await asyncio.sleep(0.25)
             response = await characteristic.read()
