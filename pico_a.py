@@ -7,11 +7,15 @@ import struct
 _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
-# Identify and message
+# Uncomment for Pico A
 IAM = "Pico A"
 IAM_SENDING_TO = "Pico B"
-MESSAGE = f"Hello from {IAM}!"
 
+# Uncomment for Pico B
+# IAM = "Pico B"
+# IAM_SENDING_TO = "Pico A"
+
+MESSAGE = f"Hello from {IAM}!"
 
 # Bluetooth parameters
 ble_name = f"{IAM}"  # You can dynamically change this if you want unique names
@@ -47,7 +51,7 @@ async def send_data_task(connection, characteristic):
             print(f"{ble_name} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
-            break
+            return
         
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
@@ -100,52 +104,54 @@ async def ble_scan():
 
 async def run_central_mode():
     # Start scanning for a device with the matching service UUID
-    device = await ble_scan()
-    
-    if device is None:
-        return
-    print(f"device is: {device}, name is {device.name()}")
-
-    try:
-        print(f"Connecting to {device.name()}")
-        connection = await device.device.connect()
+    while True:
+        device = await ble_scan()
         
-    except asyncio.TimeoutError:
-        print("Timeout during connection")
-        return
+        if device is None:
+            return
+        print(f"device is: {device}, name is {device.name()}")
 
-    print(f"{ble_name} connected to {connection}")
+        try:
+            print(f"Connecting to {device.name()}")
+            connection = await device.device.connect()
+            
+        except asyncio.TimeoutError:
+            print("Timeout during connection")
+            return
+
+        print(f"{ble_name} connected to {connection}")
 
 
-    # Discover services
-    try:
-        service = await connection.service(ble_svc_uuid)
-    except:
-        print("Timed out discovering services/characteristics")
-        return
-    if not service:
-        print("no service found")
-        return
-    else:
-        print(f"service: {service} {dir(service)}")
-        characteristic = await service.characteristic(ble_characteristic_uuid)
-     
-        print(f"characteristic: {characteristic}")
-        tasks = [
-            asyncio.create_task(send_data_task(connection, characteristic)),
-            asyncio.create_task(receive_data_task(connection, characteristic)),
-        ]
-        await asyncio.gather(*tasks)
+        # Discover services
+        try:
+            service = await connection.service(ble_svc_uuid)
+        except:
+            print("Timed out discovering services/characteristics")
+            return
+        if not service:
+            print("no service found")
+            return
+        else:
+            print(f"service: {service} {dir(service)}")
+            characteristic = await service.characteristic(ble_characteristic_uuid)
+         
+            print(f"characteristic: {characteristic}")
+            tasks = [
+                asyncio.create_task(send_data_task(connection, characteristic)),
+                asyncio.create_task(receive_data_task(connection, characteristic)),
+            ]
+            await asyncio.gather(*tasks)
 
-        await connection.disconnected()
-        print(f"{ble_name} disconnected from {device.name()}")
+            await connection.disconnected()
+            print(f"{ble_name} disconnected from {device.name()}")
 
 async def main():
-    tasks = [
-        asyncio.create_task(run_peripheral_mode()),
-        asyncio.create_task(run_central_mode()),
-    ]
-    
-    await asyncio.gather(*tasks)
+    while True:
+        tasks = [
+            asyncio.create_task(run_peripheral_mode()),
+            asyncio.create_task(run_central_mode()),
+        ]
+        
+        await asyncio.gather(*tasks)
 
 asyncio.run(main())
