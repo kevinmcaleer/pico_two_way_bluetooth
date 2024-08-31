@@ -35,14 +35,17 @@ async def send_data_task(connection, characteristic):
     while True:
         message = MESSAGE
         print(f"sending {message.encode()}")
-        await characteristic.write(encode_message(message))
+        try:
+            await characteristic.write(encode_message(message))
+        except Exception as e:
+            print("writing error {e}")
         print(f"{ble_name} sent: {message}")
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
 async def receive_data_task(connection, characteristic):
     while True:
         try:
-            data = await characteristic.notified()
+            data = await characteristic.read()
             print(f"{ble_name} received: {decode_message(data)}")
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
@@ -112,6 +115,7 @@ async def run_central_mode():
         return
     if not service:
         print("no service found")
+        return
     else:
         print(f"service: {service} {dir(service)}")
         characteristic = await service.characteristic(ble_characteristic_uuid)

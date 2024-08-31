@@ -1,13 +1,14 @@
 import aioble
 import bluetooth
 import asyncio
+import struct
 
 # Define UUIDs for the service and characteristic
 _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # Bluetooth parameters
-ble_name = "Pico B"  # You can dynamically change this if you want unique names
+ble_name = "Pico A"  # You can dynamically change this if you want unique names
 ble_svc_uuid = bluetooth.UUID(0x181A)
 ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
 ble_appearance = 0x0300
@@ -16,20 +17,36 @@ ble_scan_length = 5000
 ble_interval = 30000
 ble_window = 30000
 
-MESSAGE = "Hello from Pico!"
+MESSAGE = "Hello from Pico B!"
+
+def encode_message(message):
+    return message.encode('utf-8')
+
+def decode_message(message):
+    return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
+    if connection is None:
+        print("error - no connection in send data")
+    if characteristic is None:
+        print("error no characteristic provided in send data")
+    else:
+        print(f"characteristic is {characteristic}")
     while True:
         message = MESSAGE
-        await characteristic.write(message.encode(), response=True)
+        print(f"sending {message.encode()}")
+        try:
+            await characteristic.write(encode_message(message))
+        except Exception as e:
+            print("writing error {e}")
         print(f"{ble_name} sent: {message}")
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
 async def receive_data_task(connection, characteristic):
     while True:
         try:
-            data = await characteristic.notified()
-            print(f"{ble_name} received: {data.decode()}")
+            data = await characteristic.read()
+            print(f"{ble_name} received: {decode_message(data)}")
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
             break
@@ -63,52 +80,55 @@ async def run_peripheral_mode():
 
 async def ble_scan():
     print(f"Scanning for BLE Beacon named {ble_name}...")
-    async with aioble.scan(
-        ble_scan_length,
-        interval_us=ble_interval,
-        window_us=ble_window,
-        active=True) as scanner:
-        async for result in scanner:
-            if result.name() == ble_name and \
-               ble_svc_uuid in results.services():
-                   return result.device
-    return None
-
+    
     async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
         async for result in scanner:
-
-            # See if it matches our name
-            if result.name() == "KevsRobots":
-                print("Found KevsRobots")
-                for item in result.services():
-                    print (item)
-                if _ENV_SENSE_UUID in result.services():
-                    print("Found Robot Remote Service")
-                    return result.device
-            
+            if result.name() == ble_name and ble_svc_uuid in result.services():
+                print(f"found {result.name()} with service uuid {ble_svc_uuid}")
+                return result
     return None
 
 async def run_central_mode():
     # Start scanning for a device with the matching service UUID
-    connection = await ble_scan()
+    device = await ble_scan()
+    
+    if device is None:
+        return
+    print(f"device is: {device}, name is {device.name()}")
 
-    print(f"{ble_name} connected to {connection.name()}")
+    try:
+        print(f"Connecting to {device.name()}")
+        connection = await device.device.connect()
+        
+    except asyncio.TimeoutError:
+        print("Timeout during connection")
+        return
+
+    print(f"{ble_name} connected to {connection}")
+
 
     # Discover services
-    services = await connection.discover_services()
-    for service in services:
-        if service.uuid == ble_svc_uuid:
-            characteristics = await service.discover_characteristics()
-            for characteristic in characteristics:
-                if characteristic.uuid == ble_characteristic_uuid:
-                    tasks = [
-                        asyncio.create_task(send_data_task(connection, characteristic)),
-                        asyncio.create_task(receive_data_task(connection, characteristic)),
-                    ]
-                    await asyncio.gather(*tasks)
+    try:
+        service = await connection.service(ble_svc_uuid)
+    except:
+        print("Timed out discovering services/characteristics")
+        return
+    if not service:
+        print("no service found")
+        return
+    else:
+        print(f"service: {service} {dir(service)}")
+        characteristic = await service.characteristic(ble_characteristic_uuid)
+     
+        print(f"characteristic: {characteristic}")
+        tasks = [
+            asyncio.create_task(send_data_task(connection, characteristic)),
+            asyncio.create_task(receive_data_task(connection, characteristic)),
+        ]
+        await asyncio.gather(*tasks)
 
-                await connection.disconnected()
-                print(f"{ble_name} disconnected from {result.name()}")
+        await connection.disconnected()
+        print(f"{ble_name} disconnected from {device.name()}")
 
 async def main():
     tasks = [
