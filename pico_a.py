@@ -111,8 +111,8 @@ async def run_central_mode():
         print("Timed out discovering services/characteristics")
         return
     if not service:
-        print("no service")
-    if service:
+        print("no service found")
+    else:
         print(f"service: {service} {dir(service)}")
         characteristic = await service.characteristic(ble_characteristic_uuid)
      
