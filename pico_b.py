@@ -52,8 +52,6 @@ async def send_data_task(connection, characteristic):
         if not characteristic:
             print("error no characteristic provided in send data")
             continue
-        else:
-            print(f"Characteristic is {characteristic}")
         
         message = MESSAGE
         print(f"sending {message}")
@@ -62,7 +60,8 @@ async def send_data_task(connection, characteristic):
             msg = encode_message(message)
             print(f"msg {msg}")
             characteristic.write(msg)
-            response = await characteristic.read()
+            response = ""
+#             response = await characteristic.read()
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
