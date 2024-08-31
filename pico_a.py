@@ -20,10 +20,10 @@ ble_window = 30000
 MESSAGE = "Hello from Pico!"
 
 def encode_message(message):
-    return struct.pack("<h", message)
+    return message.encode('utf-8')
 
 def decode_message(message):
-    return struct.unpack("<h", message)
+    return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
     if connection is None:
