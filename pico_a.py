@@ -9,7 +9,7 @@ _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # IAM = "Central" # Change to 'Peripheral' or 'Central'
-IAM = "Peripheral"
+IAM = "Central"
 
 if IAM not in ['Peripheral','Central']:
     print(f"IAM must be either Peripheral or Central")
@@ -175,7 +175,7 @@ async def run_central_mode():
             print(f"characteristic found: {characteristic}")
         except Exception as e:
             print(f"Error discovering characteristics: {e}")
-            await connection.disconnection()
+            await connection.disconnect()
             continue
         
         tasks = [
