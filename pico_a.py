@@ -58,11 +58,14 @@ async def send_data_task(connection, characteristic):
         print(f"sending {message}")
         
         try:
+            response = characteristic.read()
+            if response:
+                response_message = decoded_message(response)
+                print(f"Response from Peripheral: {response_message}")
             msg = encode_message(message)
             print(f"msg {msg}")
             characteristic.write(msg)
-            response = ""
-            response = characteristic.read()
+            
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")

@@ -58,11 +58,14 @@ async def send_data_task(connection, characteristic):
         print(f"sending {message}")
         
         try:
+            response = characteristic.read()
+            if response:
+                response_message = decoded_message(response)
+                print(f"Response from Peripheral: {response_message}")
             msg = encode_message(message)
             print(f"msg {msg}")
             characteristic.write(msg)
-            response = ""
-            response = characteristic.read()
+            
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
@@ -88,7 +91,7 @@ async def receive_data_task(connection, characteristic):
             break
         
         try:
-            response = characteristic.write(message_encode("I got it"))
+            response = characteristic.write(encode_message("I got it"))
         except Exception as e:
             print(f"Error sending response  data: {e}")
             break
@@ -164,7 +167,7 @@ async def run_central_mode():
             except Exception as e:
                 print(f"Error discovering services {e}")
                 await connection.disconnect()
-            continue
+                continue
         
             tasks = [
                 asyncio.create_task(receive_data_task(connection, characteristic)),
