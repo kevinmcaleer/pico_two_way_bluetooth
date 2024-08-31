@@ -39,21 +39,22 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
-    if connection is None:
+    if not connection:
         print("error - no connection in send data")
-    if characteristic is None:
+        return
+    if not characteristic:
         print("error no characteristic provided in send data")
-    else:
-        print(f"characteristic is {characteristic}")
+        return
+
     while True:
         message = MESSAGE
         print(f"sending {message.encode()}")
         try:
             await characteristic.write(encode_message(message))
-            print(f"{ble_name} sent: {message}")
+            print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
-            return
+            break
         
         await asyncio.sleep(1)
 
@@ -61,11 +62,16 @@ async def receive_data_task(connection, characteristic):
     while True:
         try:
             data = await characteristic.read()
-            print(f"{ble_name} received: {decode_message(data)}")
-            break
+            if data:    
+                print(f"{IAM} received: {decode_message(data)}")
+                await asyncio.sleep(1)
+            
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
-            return
+            break
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+            break
 
 async def run_peripheral_mode():
     # Set up the Bluetooth service and characteristic
@@ -93,6 +99,8 @@ async def run_peripheral_mode():
                 asyncio.create_task(receive_data_task(connection, characteristic)),
             ]
             await asyncio.gather(*tasks)
+            print(f"{IAM} disconnected")
+            break
 
 async def ble_scan():
     print(f"Scanning for BLE Beacon named {ble_name}...")
@@ -110,7 +118,7 @@ async def run_central_mode():
         device = await ble_scan()
         
         if device is None:
-            break
+            continue
         print(f"device is: {device}, name is {device.name()}")
 
         try:
@@ -119,9 +127,9 @@ async def run_central_mode():
             
         except asyncio.TimeoutError:
             print("Timeout during connection")
-            break
+            continue
 
-        print(f"{ble_name} connected to {connection}")
+        print(f"{IAM} connected to {connection}")
 
 
         # Discover services
@@ -129,24 +137,32 @@ async def run_central_mode():
             service = await connection.service(ble_svc_uuid)
         except:
             print("Timed out discovering services/characteristics")
-            break
+            continue
+        
         if not service:
             print("no service found")
-            break
-        else:
-            print(f"service: {service} {dir(service)}")
+            await connection.disconnect()
+            continue
+        
+        print("Service found: {service}")
+        try:
             characteristic = await service.characteristic(ble_characteristic_uuid)
          
-            print(f"characteristic: {characteristic}")
-            tasks = [
-                asyncio.create_task(send_data_task(connection, characteristic)),
-                asyncio.create_task(receive_data_task(connection, characteristic)),
-            ]
-            await asyncio.gather(*tasks)
+            print(f"characteristic found: {characteristic}")
+        except Exception as e:
+            print(f"Error discovering characteristics: {e}")
+            await disconnection()
+            continue
+        
+        tasks = [
+            asyncio.create_task(send_data_task(connection, characteristic)),
+            asyncio.create_task(receive_data_task(connection, characteristic)),
+        ]
+        await asyncio.gather(*tasks)
 
-            await connection.disconnected()
-            print(f"{ble_name} disconnected from {device.name()}")
-            break
+        await connection.disconnected()
+        print(f"{ble_name} disconnected from {device.name()}")
+        break
 
 async def main():
     while True:
