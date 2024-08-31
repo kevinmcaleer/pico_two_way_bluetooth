@@ -30,7 +30,7 @@ ble_window = 30000
 connected = False
 
 # Message count
-count = 0
+message_count = 0
 
 def encode_message(message):
     return message.encode('utf-8')
@@ -39,33 +39,54 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
+
+
     while True:
         if not connection:
             print("error - no connection in send data")
-            return
+            break
         if not characteristic:
             print("error no characteristic provided in send data")
-            return
+            break
+        message = MESSAGE
+        print(f"sending {message.encode()}")
+        try:
+            await characteristic.write(encode_message(message))
+            print(f"{IAM} sent: {message}")
+        except Exception as e:
+            print(f"writing error {e}")
+            break
+        
+        await asyncio.sleep(1)
 
-        while True:
-            message = MESSAGE
-            print(f"sending {message.encode()}")
+async def send_and_receive(connection, characteristic):
+    while True:
+        try:
+            data = await characteristic.read()
+        except Exception as e:
+            print(f"writing reading {e}")
+            break
+        
+        if data:
+            print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
+#                 await asyncio.sleep(1)
+            message_count += 1
             try:
                 await characteristic.write(encode_message(message))
-                print(f"{IAM} sent: {message}")
-            except Exception as e:
+            except Exception as e:        
                 print(f"writing error {e}")
                 break
             
-            await asyncio.sleep(1)
 
 async def receive_data_task(connection, characteristic):
+    global message_count
     while True:
         try:
             data = await characteristic.read()
             if data:    
-                print(f"{IAM} received: {decode_message(data)}")
-                await asyncio.sleep(1)
+                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
+#                 await asyncio.sleep(1)
+            message_count += 1
             
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
@@ -96,8 +117,9 @@ async def run_peripheral_mode():
             print(f"{ble_name} connected to another device: {connection.device}")
 
             tasks = [
-                asyncio.create_task(send_data_task(connection, characteristic)),
-                asyncio.create_task(receive_data_task(connection, characteristic)),
+                asyncio.create_task(send_and_receive(connection, characteristic)),
+#                 asyncio.create_task(send_data_task(connection, characteristic)),
+#                 asyncio.create_task(receive_data_task(connection, characteristic)),
             ]
             await asyncio.gather(*tasks)
             print(f"{IAM} disconnected")
@@ -175,4 +197,6 @@ async def main():
         await asyncio.gather(*tasks)
         
 asyncio.run(main())
+
+
 
