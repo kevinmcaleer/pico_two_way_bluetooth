@@ -2,11 +2,10 @@ import aioble
 import bluetooth
 import uasyncio as asyncio
 
-# UUIDs for the service and characteristic
-_SERVICE_UUID = bluetooth.UUID(0x181A)
+# Define UUIDs for the service and characteristic
+_SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
-# Device role configuration
 IAM = "Central"
 ping_message = "Ping from Central"
 
@@ -16,6 +15,9 @@ def encode_message(message):
 def decode_message(message):
     return message.decode('utf-8')
 
+async def notification_callback(characteristic, data):
+    print(f"{IAM} received notification: {decode_message(data)}")
+
 async def ble_scan():
     print(f"{IAM} scanning for peripheral...")
 
@@ -23,7 +25,7 @@ async def ble_scan():
         async for result in scanner:
             if _SERVICE_UUID in result.services():
                 print(f"Found peripheral with service UUID {_SERVICE_UUID}")
-                return result.device  # Return the device object
+                return result.device
     return None
 
 async def run_central_mode():
@@ -38,10 +40,10 @@ async def run_central_mode():
         connection = await device.connect()
         print(f"{IAM} connected to the peripheral.")
 
-        # Add a short delay to ensure the service is ready
-        await asyncio.sleep(1)  # 1-second delay
+        await asyncio.sleep(1)
 
-        service = await connection.service(_SERVICE_UUID)
+        services = await connection.services()
+        service = services.get(_SERVICE_UUID)
         if not service:
             print("No service found")
             await connection.disconnect()
@@ -50,14 +52,17 @@ async def run_central_mode():
         characteristic = await service.characteristic(_CHARACTERISTIC_UUID)
         print(f"Characteristic found.")
 
+        # Subscribe to notifications on the characteristic
+        await characteristic.subscribe(notification_callback)
+        print(f"{IAM} subscribed to notifications.")
+
         # Send a ping message to the peripheral
         await characteristic.write(encode_message(ping_message))
         print(f"{IAM} sent: {ping_message}")
 
-        # Read the response from the peripheral
-        response = await characteristic.read()
-        if response:
-            print(f"{IAM} received response: {decode_message(response)}")
+        # Wait for notifications indefinitely
+        while connection.is_connected():
+            await asyncio.sleep(1)
 
     except Exception as e:
         print(f"Error: {e}")
