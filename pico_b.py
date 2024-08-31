@@ -43,7 +43,7 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
-
+    global message_count
     while True:
         if not connection:
             print("error - no connection in send data")
@@ -53,7 +53,8 @@ async def send_data_task(connection, characteristic):
             print("error no characteristic provided in send data")
             continue
         
-        message = MESSAGE
+        message = f"{MESSAGE} {message_count}"
+        message_count +1
         print(f"sending {message}")
         
         try:
