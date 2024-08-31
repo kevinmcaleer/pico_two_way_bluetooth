@@ -62,7 +62,7 @@ async def send_data_task(connection, characteristic):
             print(f"msg {msg}")
             characteristic.write(msg)
             
-            con, data = await characteristic.written()
+            con, data = characteristic.written()
             print(f"data {data}")
             
             print(f"{IAM} sent: {message}")
