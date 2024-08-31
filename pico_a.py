@@ -44,9 +44,10 @@ async def send_data_task(connection, characteristic):
         print(f"sending {message.encode()}")
         try:
             await characteristic.write(encode_message(message))
+            print(f"{ble_name} sent: {message}")
         except Exception as e:
             print("writing error {e}")
-        print(f"{ble_name} sent: {message}")
+        
         await asyncio.sleep(3)  # Wait for 2 seconds before sending the next message
 
 async def receive_data_task(connection, characteristic):
