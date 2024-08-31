@@ -61,7 +61,7 @@ async def send_data_task(connection, characteristic):
             msg = encode_message(message)
             characteristic.write(msg)
             
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.5)
             response = decode_message(characteristic.read())
             
             print(f"{IAM} sent: {message}, response {response}")
