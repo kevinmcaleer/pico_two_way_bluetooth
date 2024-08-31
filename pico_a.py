@@ -123,7 +123,7 @@ async def run_peripheral_mode():
             print(f"{ble_name} connected to another device: {connection.device}")
 
             # Subscribe to notifications on the characteristic
-            await connection.subscribe(notification_callback)
+            await characteristic.subscribe(notification_callback)
             print(f"{IAM} subscribed to notifications.")
 
             tasks = [
