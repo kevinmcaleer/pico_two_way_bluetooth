@@ -21,7 +21,8 @@ MESSAGE = "Hello from Pico!"
 async def send_data_task(connection, characteristic):
     while True:
         message = MESSAGE
-        await characteristic.write(message.encode(), response=True)
+        print(f"sending {message}")
+        await characteristic.write(message.encode())
         print(f"{ble_name} sent: {message}")
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
