@@ -62,7 +62,7 @@ async def send_data_task(connection, characteristic):
             print(f"msg {msg}")
             characteristic.write(msg)
             
-            print(f"{IAM} sent: {message}, received {response}")
+            print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
             continue
