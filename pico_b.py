@@ -39,24 +39,25 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
-    if not connection:
-        print("error - no connection in send data")
-        return
-    if not characteristic:
-        print("error no characteristic provided in send data")
-        return
-
     while True:
-        message = MESSAGE
-        print(f"sending {message.encode()}")
-        try:
-            await characteristic.write(encode_message(message))
-            print(f"{IAM} sent: {message}")
-        except Exception as e:
-            print(f"writing error {e}")
-            break
-        
-        await asyncio.sleep(1)
+        if not connection:
+            print("error - no connection in send data")
+            return
+        if not characteristic:
+            print("error no characteristic provided in send data")
+            return
+
+        while True:
+            message = MESSAGE
+            print(f"sending {message.encode()}")
+            try:
+                await characteristic.write(encode_message(message))
+                print(f"{IAM} sent: {message}")
+            except Exception as e:
+                print(f"writing error {e}")
+                break
+            
+            await asyncio.sleep(1)
 
 async def receive_data_task(connection, characteristic):
     while True:

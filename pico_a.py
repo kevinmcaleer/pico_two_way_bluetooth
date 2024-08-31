@@ -30,7 +30,7 @@ ble_window = 30000
 connected = False
 
 # Message count
-count = 0
+message_count = 0
 
 def encode_message(message):
     return message.encode('utf-8')
@@ -39,14 +39,15 @@ def decode_message(message):
     return message.decode('utf-8')
 
 async def send_data_task(connection, characteristic):
-    if not connection:
-        print("error - no connection in send data")
-        return
-    if not characteristic:
-        print("error no characteristic provided in send data")
-        return
+
 
     while True:
+        if not connection:
+            print("error - no connection in send data")
+            break
+        if not characteristic:
+            print("error no characteristic provided in send data")
+            break
         message = MESSAGE
         print(f"sending {message.encode()}")
         try:
@@ -59,12 +60,14 @@ async def send_data_task(connection, characteristic):
         await asyncio.sleep(1)
 
 async def receive_data_task(connection, characteristic):
+    global message_count
     while True:
         try:
             data = await characteristic.read()
             if data:    
-                print(f"{IAM} received: {decode_message(data)}")
-                await asyncio.sleep(1)
+                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
+#                 await asyncio.sleep(1)
+            message_count += 1
             
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
