@@ -47,11 +47,11 @@ async def send_data_task(connection, characteristic):
     while True:
         if not connection:
             print("error - no connection in send data")
-            continue
+            return
         
         if not characteristic:
             print("error no characteristic provided in send data")
-            continue
+            return
         else:
             print(f"Characteristic is {characteristic}")
         
@@ -66,7 +66,7 @@ async def send_data_task(connection, characteristic):
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
-            continue
+            return
         
         await asyncio.sleep(1)
             
@@ -82,16 +82,16 @@ async def receive_data_task(connection, characteristic):
             
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
-            break
+            return
         except Exception as e:
             print(f"Error receiving data: {e}")
-            break
+            return
         
         try:
             response = await characteristic.write(message_encode("I got it"))
         except Exception as e:
             print(f"Error sending response  data: {e}")
-            break
+            return
 
 async def run_peripheral_mode():
     # Set up the Bluetooth service and characteristic
@@ -121,7 +121,7 @@ async def run_peripheral_mode():
             ]
             await asyncio.gather(*tasks)
             print(f"{IAM} disconnected")
-            break
+            return
 
 async def ble_scan():
     print(f"Scanning for BLE Beacon named {ble_name}...")
@@ -139,7 +139,7 @@ async def run_central_mode():
         device = await ble_scan()
         
         if device is None:
-            continue
+            return
         print(f"device is: {device}, name is {device.name()}")
 
         try:
@@ -148,7 +148,7 @@ async def run_central_mode():
             
         except asyncio.TimeoutError:
             print("Timeout during connection")
-            continue
+            return
 
         print(f"{IAM} connected to {connection}")
 
@@ -159,14 +159,14 @@ async def run_central_mode():
                 service = await connection.service(ble_svc_uuid)
             except (asyncio.TimeoutError, AttributeError):
                 print("Timed out discovering services/characteristics")
-                continue
+                return
             except Exception as e:
                 print(f"Error discovering services {e}")
         
         if not service:
             print(f"no service found {service}")
             await connection.disconnect()
-            continue
+            return
         
         print("Service found: {service}")
         try:
@@ -176,7 +176,7 @@ async def run_central_mode():
         except Exception as e:
             print(f"Error discovering characteristics: {e}")
             await connection.disconnect()
-            continue
+            return
         
         tasks = [
             asyncio.create_task(receive_data_task(connection, characteristic)),
@@ -186,7 +186,7 @@ async def run_central_mode():
 
         await connection.disconnected()
         print(f"{ble_name} disconnected from {device.name()}")
-        break
+        return
 
 async def main():
     while True:
