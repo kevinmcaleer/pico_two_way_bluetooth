@@ -54,7 +54,7 @@ async def send_data_task(connection, characteristic):
             continue
         
         message = f"{MESSAGE} {message_count}"
-        message_count +1
+        message_count +=1
         print(f"sending {message}")
         
         try:
@@ -62,13 +62,13 @@ async def send_data_task(connection, characteristic):
             print(f"msg {msg}")
             characteristic.write(msg)
             response = ""
-#             response = await characteristic.read()
+            response = characteristic.read()
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
             print(f"writing error {e}")
             continue
         
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
             
 async def receive_data_task(connection, characteristic):
     global message_count
