@@ -91,7 +91,7 @@ async def ble_scan():
     
     async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
         async for result in scanner:
-            if result.name() == ble_name and ble_svc_uuid in result.services():
+            if result.name() == IAM_SENDING_TO and ble_svc_uuid in result.services():
                 print(f"found {result.name()} with service uuid {ble_svc_uuid}")
                 return result
     return None
