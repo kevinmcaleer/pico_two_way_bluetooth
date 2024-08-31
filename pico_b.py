@@ -60,7 +60,7 @@ async def send_data_task(connection, characteristic):
         try:
             response = characteristic.read()
             if response:
-                response_message = decoded_message(response)
+                response_message = decode_message(response)
                 print(f"Response from Peripheral: {response_message}")
             msg = encode_message(message)
             print(f"msg {msg}")
