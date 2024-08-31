@@ -88,7 +88,7 @@ async def receive_data_task(connection, characteristic):
             break
         
         try:
-            response = await characteristic.write(message_encode("I got it"))
+            response = characteristic.write(message_encode("I got it"))
         except Exception as e:
             print(f"Error sending response  data: {e}")
             break
