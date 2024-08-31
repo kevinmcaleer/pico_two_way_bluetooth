@@ -9,7 +9,7 @@ _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # IAM = "Central" # Change to 'Peripheral' or 'Central'
-IAM = "Peripheral"
+IAM = "Central"
 
 if IAM not in ['Peripheral','Central']:
     print(f"IAM must be either Peripheral or Central")
@@ -77,10 +77,8 @@ async def receive_data_task(connection, characteristic):
     global message_count
     while True:
         try:
-            data = await characteristic.read()
-            if data:    
-                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
-#                 await asyncio.sleep(1)
+            response = characteristic.write(encode_message("I got it"))
+            
             message_count += 1
             
         except asyncio.TimeoutError:
@@ -91,7 +89,10 @@ async def receive_data_task(connection, characteristic):
             break
         
         try:
-            response = characteristic.write(encode_message("I got it"))
+            data = await characteristic.read()
+            if data:    
+                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
+#                 await asyncio.sleep(1)
         except Exception as e:
             print(f"Error sending response  data: {e}")
             break
