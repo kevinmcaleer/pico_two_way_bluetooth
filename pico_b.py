@@ -8,8 +8,8 @@ _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # Identify and message
-IAM = "Pico A"
-IAM_SENDING_TO = "Pico B"
+IAM = "Pico B"
+IAM_SENDING_TO = "Pico A"
 MESSAGE = f"Hello from {IAM}!"
 
 
