@@ -7,7 +7,7 @@ _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # Device role configuration
-IAM = "Peripheral"  # Change to "Central" or "Peripheral"
+IAM = "Peripheral"  # Set to "Peripheral"
 MESSAGE = f"Hello back from {IAM}!"
 
 message_count = 0
@@ -23,17 +23,15 @@ def encode_message(message):
 def decode_message(message):
     return message.decode('utf-8')
 
-async def handle_write_request(characteristic):
+# Handle incoming write requests from the central
+async def handle_write_request(request):
     global message_count
-    data = await characteristic.read()
-    if data:
-        received_message = decode_message(data)
-        print(f"{IAM} received: {received_message}")
-        response_message = f"{MESSAGE}, count: {message_count}"
-        message_count += 1
-        await asyncio.sleep(0.5)  # Small delay to simulate processing time
-        await characteristic.write(encode_message(response_message), response=True)
-        print(f"{IAM} sent response: {response_message}")
+    received_message = decode_message(request.data)
+    print(f"{IAM} received: {received_message}")
+    response_message = f"{MESSAGE}, count: {message_count}"
+    message_count += 1
+    await request.characteristic.write(encode_message(response_message), response=True)
+    print(f"{IAM} sent response: {response_message}")
 
 async def run_peripheral_mode():
     ble_service = aioble.Service(ble_svc_uuid)
@@ -44,6 +42,7 @@ async def run_peripheral_mode():
         write=True,
         notify=True
     )
+    characteristic.on_write(handle_write_request)  # Register the write handler
     aioble.register_services(ble_service)
 
     print(f"{IAM} starting to advertise as {ble_name}")
@@ -55,9 +54,9 @@ async def run_peripheral_mode():
             services=[ble_svc_uuid]) as connection:
             print(f"{IAM} connected to another device: {connection.device}")
 
-            # Ensure connection is active before handling requests
+            # Keep the connection active and handle incoming requests
             while connection.is_connected():
-                await handle_write_request(characteristic)
+                await asyncio.sleep(1)  # Short sleep to keep the loop alive
             
             print(f"{IAM} disconnected")
             break
