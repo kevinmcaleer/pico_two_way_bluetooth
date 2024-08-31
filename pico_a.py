@@ -14,7 +14,7 @@ MESSAGE = f"Hello from {IAM}!"
 
 
 # Bluetooth parameters
-ble_name = f"IAM"  # You can dynamically change this if you want unique names
+ble_name = f"{IAM}"  # You can dynamically change this if you want unique names
 ble_svc_uuid = bluetooth.UUID(0x181A)
 ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
 ble_appearance = 0x0300
