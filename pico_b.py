@@ -7,8 +7,14 @@ import struct
 _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
+# Identify and message
+IAM = "Pico B"
+IAM_SENDING_TO = "Pico A"
+MESSAGE = f"Hello from {IAM}!"
+
+
 # Bluetooth parameters
-ble_name = "Pico A"  # You can dynamically change this if you want unique names
+ble_name = f"IAM"  # You can dynamically change this if you want unique names
 ble_svc_uuid = bluetooth.UUID(0x181A)
 ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
 ble_appearance = 0x0300
@@ -17,7 +23,8 @@ ble_scan_length = 5000
 ble_interval = 30000
 ble_window = 30000
 
-MESSAGE = "Hello from Pico B!"
+# Message count
+count = 0
 
 def encode_message(message):
     return message.encode('utf-8')
@@ -40,13 +47,14 @@ async def send_data_task(connection, characteristic):
         except Exception as e:
             print("writing error {e}")
         print(f"{ble_name} sent: {message}")
-        await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
+        await asyncio.sleep(3)  # Wait for 2 seconds before sending the next message
 
 async def receive_data_task(connection, characteristic):
     while True:
         try:
             data = await characteristic.read()
             print(f"{ble_name} received: {decode_message(data)}")
+            break
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
             break
