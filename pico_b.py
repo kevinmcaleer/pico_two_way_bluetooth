@@ -62,9 +62,6 @@ async def send_data_task(connection, characteristic):
             print(f"msg {msg}")
             characteristic.write(msg)
             
-            con, data = characteristic.written()
-            print(f"data {data}")
-            
             print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
@@ -80,7 +77,11 @@ async def receive_data_task(connection, characteristic):
             if data:    
                 print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
                 await asyncio.sleep(0.5)
+            
             message_count += 1
+            
+            con, data = characteristic.written()
+            print(f"data {data}")
             
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
