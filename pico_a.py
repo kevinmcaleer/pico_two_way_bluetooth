@@ -42,9 +42,6 @@ def encode_message(message):
 def decode_message(message):
     return message.decode('utf-8')
 
-async def notification_callback(data):
-    print(f"{IAM} received notification: {decode_message(data)}")
-
 async def send_data_task(connection, characteristic):
     global message_count
     while True:
@@ -61,13 +58,9 @@ async def send_data_task(connection, characteristic):
         print(f"sending {message}")
         
         try:
-            response = characteristic.read()
-            if response:
-                response_message = decode_message(response)
-                print(f"Response from Peripheral: {response_message}")
             msg = encode_message(message)
             print(f"msg {msg}")
-            characteristic.write(msg)
+            characteristic.write(msg, response=True)
             
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
@@ -92,15 +85,7 @@ async def receive_data_task(connection, characteristic):
         except Exception as e:
             print(f"Error receiving data: {e}")
             break
-        
-        try:
-            response_message = f"{MESSAGE}, count: {message_count}"
-            await characteristic.notify(encode_message(response_message))
-            print(f"{IAM} notified response {response_message}")
-        except Exception as e:
-            print(f"Error sending response  data: {e}")
-            break
-
+    
 async def run_peripheral_mode():
     # Set up the Bluetooth service and characteristic
     ble_service = aioble.Service(ble_svc_uuid)
@@ -121,10 +106,6 @@ async def run_peripheral_mode():
             services=[ble_svc_uuid],
             appearance=ble_appearance) as connection:
             print(f"{ble_name} connected to another device: {connection.device}")
-
-            # Subscribe to notifications on the characteristic
-            await characteristic.subscribe(notification_callback)
-            print(f"{IAM} subscribed to notifications.")
 
             tasks = [
                 # asyncio.create_task(send_and_receive(connection, characteristic)),
