@@ -52,10 +52,6 @@ async def run_central_mode():
         characteristic = await service.characteristic(_CHARACTERISTIC_UUID)
         print(f"Characteristic found.")
 
-        # Subscribe to notifications on the characteristic
-        await characteristic.subscribe(notification_callback)
-        print(f"{IAM} subscribed to notifications.")
-
         # Send a ping message to the peripheral
         await characteristic.write(encode_message(ping_message))
         print(f"{IAM} sent: {ping_message}")

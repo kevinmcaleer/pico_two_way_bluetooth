@@ -42,6 +42,9 @@ def encode_message(message):
 def decode_message(message):
     return message.decode('utf-8')
 
+async def notification_callback(characteristic, data):
+    print(f"{IAM} received notification: {decode_message(data)}")
+
 async def send_data_task(connection, characteristic):
     global message_count
     while True:
@@ -77,11 +80,10 @@ async def receive_data_task(connection, characteristic):
     global message_count
     while True:
         try:
-            print("sending response")
-            response = await characteristic.write(encode_message("I got it"))
-            await asyncio.sleep(0.5)
-            print(f"response is: {response}")
-            
+            data = await characteristic.read()
+            if data:    
+                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
+                await asyncio.sleep(0.5)
             message_count += 1
             
         except asyncio.TimeoutError:
@@ -92,10 +94,9 @@ async def receive_data_task(connection, characteristic):
             break
         
         try:
-            data = await characteristic.read()
-            if data:    
-                print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
-                await asyncio.sleep(0.5)
+            response_message = f"{MESSAGE}, count: {message_count}"
+            await characteristic.notify(connection, encode_message(response_message))
+            print(f"{IAM} notified response {response_message}")
         except Exception as e:
             print(f"Error sending response  data: {e}")
             break
@@ -120,6 +121,10 @@ async def run_peripheral_mode():
             services=[ble_svc_uuid],
             appearance=ble_appearance) as connection:
             print(f"{ble_name} connected to another device: {connection.device}")
+
+            # Subscribe to notifications on the characteristic
+            await characteristic.subscribe(notification_callback)
+            print(f"{IAM} subscribed to notifications.")
 
             tasks = [
                 # asyncio.create_task(send_and_receive(connection, characteristic)),
