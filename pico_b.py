@@ -77,8 +77,10 @@ async def receive_data_task(connection, characteristic):
     global message_count
     while True:
         try:
+            print("sending response")
             response = await characteristic.write(encode_message("I got it"))
             await asyncio.sleep(0.5)
+            print(f"response is: {response}")
             
             message_count += 1
             
@@ -93,7 +95,7 @@ async def receive_data_task(connection, characteristic):
             data = await characteristic.read()
             if data:    
                 print(f"{IAM} received: {decode_message(data)}, count: {message_count}")
-#                 await asyncio.sleep(1)
+                await asyncio.sleep(0.5)
         except Exception as e:
             print(f"Error sending response  data: {e}")
             break
