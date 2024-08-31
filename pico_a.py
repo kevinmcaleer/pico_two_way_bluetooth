@@ -47,6 +47,7 @@ async def send_data_task(connection, characteristic):
             print(f"{ble_name} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
+            break
         
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
