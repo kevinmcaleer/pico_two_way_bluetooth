@@ -47,11 +47,11 @@ async def send_data_task(connection, characteristic):
     while True:
         if not connection:
             print("error - no connection in send data")
-            break
+            continue
         
         if not characteristic:
             print("error no characteristic provided in send data")
-            break
+            continue
         else:
             print(f"Characteristic is {characteristic}")
         

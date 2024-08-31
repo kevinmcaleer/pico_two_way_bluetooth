@@ -47,11 +47,11 @@ async def send_data_task(connection, characteristic):
     while True:
         if not connection:
             print("error - no connection in send data")
-            break
+            continue
         
         if not characteristic:
             print("error no characteristic provided in send data")
-            break
+            continue
         else:
             print(f"Characteristic is {characteristic}")
         
@@ -175,7 +175,7 @@ async def run_central_mode():
             print(f"characteristic found: {characteristic}")
         except Exception as e:
             print(f"Error discovering characteristics: {e}")
-            await connection.disconnection()
+            await connection.disconnect()
             continue
         
         tasks = [
@@ -202,6 +202,8 @@ async def main():
         await asyncio.gather(*tasks)
         
 asyncio.run(main())
+
+
 
 
 
