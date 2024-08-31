@@ -157,36 +157,24 @@ async def run_central_mode():
         async with connection:
             try:
                 service = await connection.service(ble_svc_uuid)
+                characteristic = await service.characteristic(ble_characteristic_uuid)
             except (asyncio.TimeoutError, AttributeError):
                 print("Timed out discovering services/characteristics")
                 continue
             except Exception as e:
                 print(f"Error discovering services {e}")
-        
-        if not service:
-            print(f"no service found {service}")
-            await connection.disconnect()
+                await connection.disconnect()
             continue
         
-        print("Service found: {service}")
-        try:
-            characteristic = await service.characteristic(ble_characteristic_uuid)
-         
-            print(f"characteristic found: {characteristic}")
-        except Exception as e:
-            print(f"Error discovering characteristics: {e}")
-            await connection.disconnect()
-            continue
-        
-        tasks = [
-            asyncio.create_task(receive_data_task(connection, characteristic)),
+            tasks = [
+                asyncio.create_task(receive_data_task(connection, characteristic)),
 
-        ]
-        await asyncio.gather(*tasks)
+            ]
+            await asyncio.gather(*tasks)
 
-        await connection.disconnected()
-        print(f"{ble_name} disconnected from {device.name()}")
-        break
+            await connection.disconnected()
+            print(f"{ble_name} disconnected from {device.name()}")
+            break
 
 async def main():
     while True:
