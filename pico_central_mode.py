@@ -10,9 +10,6 @@ _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 IAM = "Central"
 ping_message = "Ping from Central"
 
-# Bluetooth parameters
-ble_name = f"Pico_{IAM}"
-
 def encode_message(message):
     return message.encode('utf-8')
 
@@ -25,8 +22,8 @@ async def ble_scan():
     async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
         async for result in scanner:
             if _SERVICE_UUID in result.services():
-                print(f"Found peripheral: {result.name()} with service UUID {_SERVICE_UUID}")
-                return result
+                print(f"Found peripheral with service UUID {_SERVICE_UUID}")
+                return result.device  # Return the device object
     return None
 
 async def run_central_mode():
@@ -35,11 +32,14 @@ async def run_central_mode():
         print(f"{IAM} could not find peripheral.")
         return
 
-    print(f"Connecting to {device.name()}")
+    print(f"Connecting to the peripheral...")
 
     try:
         connection = await device.connect()
-        print(f"{IAM} connected to {device.name()}")
+        print(f"{IAM} connected to the peripheral.")
+
+        # Add a short delay to ensure the service is ready
+        await asyncio.sleep(1)  # 1-second delay
 
         service = await connection.service(_SERVICE_UUID)
         if not service:
@@ -48,7 +48,7 @@ async def run_central_mode():
             return
 
         characteristic = await service.characteristic(_CHARACTERISTIC_UUID)
-        print(f"Characteristic found: {characteristic}")
+        print(f"Characteristic found.")
 
         # Send a ping message to the peripheral
         await characteristic.write(encode_message(ping_message))
@@ -63,7 +63,7 @@ async def run_central_mode():
         print(f"Error: {e}")
     finally:
         await connection.disconnect()
-        print(f"{IAM} disconnected from {device.name()}")
+        print(f"{IAM} disconnected from the peripheral.")
 
 async def main():
     await run_central_mode()
