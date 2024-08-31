@@ -2,64 +2,26 @@ import aioble
 import bluetooth
 import asyncio
 
-# Define UUIDs for the service and characteristic
+# UUIDs for the service and characteristic
 _SERVICE_UUID = bluetooth.UUID(0x1848)
 _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # Device role configuration
 IAM = "Central"  # Change to "Central" or "Peripheral"
-MESSAGE = f"Hello from {IAM}!"
+MESSAGE = f"Hello back from {IAM}!"
+
+message_count = 0
 
 # Bluetooth parameters
-ble_name = f"Pico_{IAM}"
+ble_name = IAM
 ble_svc_uuid = bluetooth.UUID(0x181A)
 ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
-ble_advertising_interval = 2000
-
-# Global message count for the peripheral
-message_count = 0
 
 def encode_message(message):
     return message.encode('utf-8')
 
 def decode_message(message):
     return message.decode('utf-8')
-
-async def handle_write_request(characteristic):
-    global message_count
-    data = await characteristic.read()
-    if data:
-        received_message = decode_message(data)
-        print(f"{IAM} received: {received_message}")
-        response_message = f"{MESSAGE}, count: {message_count}"
-        await characteristic.write(encode_message(response_message), response=True)
-        print(f"{IAM} sent response: {response_message}")
-        message_count += 1
-
-async def run_peripheral_mode():
-    ble_service = aioble.Service(ble_svc_uuid)
-    characteristic = aioble.Characteristic(
-        ble_service,
-        ble_characteristic_uuid,
-        read=True,
-        write=True,
-        notify=True
-    )
-    aioble.register_services(ble_service)
-
-    print(f"{IAM} starting to advertise as {ble_name}")
-
-    while True:
-        async with await aioble.advertise(
-            ble_advertising_interval,
-            name=ble_name,
-            services=[ble_svc_uuid]) as connection:
-            print(f"{IAM} connected to another device: {connection.device}")
-
-            while connection.is_connected():
-                await handle_write_request(characteristic)
-            print(f"{IAM} disconnected")
-            break
 
 async def ble_scan():
     print(f"{IAM} scanning for peripheral...")
@@ -76,6 +38,8 @@ async def run_central_mode():
     while True:
         device = await ble_scan()
         if not device:
+            print(f"{IAM} could not find peripheral. Retrying...")
+            await asyncio.sleep(2)  # Wait before retrying scan
             continue
 
         print(f"Connecting to {device.name()}")
@@ -84,6 +48,7 @@ async def run_central_mode():
             connection = await device.device.connect()
         except Exception as e:
             print(f"Connection error: {e}")
+            await asyncio.sleep(2)  # Wait before retrying connection
             continue
 
         print(f"{IAM} connected to {device.name()}")
@@ -98,32 +63,29 @@ async def run_central_mode():
             characteristic = await service.characteristic(ble_characteristic_uuid)
             print(f"Characteristic found: {characteristic}")
 
-            # Central sends a message to the peripheral
-            request_message = "Requesting data"
-            message_count += 1
-            await characteristic.write(encode_message(request_message))
-            print(f"{IAM} sent: {request_message}")
+            while connection.is_connected():
+                # Central writes a message to the peripheral
+                request_message = f"Requesting data {message_count}"
+                message_count += 1
+                await characteristic.write(encode_message(request_message))
+                print(f"{IAM} sent: {request_message}")
 
-            # Central waits for a response from the peripheral
-            response = await characteristic.read()
-            if response:
-                print(f"{IAM} received response: {decode_message(response)}")
+                # Central waits for a response from the peripheral
+                response = await characteristic.read()
+                if response:
+                    print(f"{IAM} received response: {decode_message(response)}")
+
+                await asyncio.sleep(2)  # Wait before sending the next request
 
         except Exception as e:
             print(f"Error during service/characteristic discovery: {e}")
             await connection.disconnect()
             continue
 
-        await connection.disconnected()
         print(f"{IAM} disconnected from {device.name()}")
-        break
+        await asyncio.sleep(2)  # Wait before trying to reconnect
 
 async def main():
-    if IAM == "Peripheral":
-        await run_peripheral_mode()
-    elif IAM == "Central":
-        await run_central_mode()
-    else:
-        print("Invalid role defined. Please set IAM to 'Central' or 'Peripheral'.")
+    await run_central_mode()
 
 asyncio.run(main())

@@ -10,13 +10,12 @@ _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 IAM = "Peripheral"  # Change to "Central" or "Peripheral"
 MESSAGE = f"Hello back from {IAM}!"
 
+message_count = 0
+
 # Bluetooth parameters
-ble_name = IAM
+ble_name = f"Pico_{IAM}"
 ble_svc_uuid = bluetooth.UUID(0x181A)
 ble_characteristic_uuid = bluetooth.UUID(0x2A6E)
-
-# Message count for response tracking
-message_count = 0
 
 def encode_message(message):
     return message.encode('utf-8')
@@ -26,16 +25,15 @@ def decode_message(message):
 
 async def handle_write_request(characteristic):
     global message_count
-    while True:
-        data = await characteristic.read()
-        if data:
-            received_message = decode_message(data)
-            print(f"{IAM} received: {received_message}")
-            response_message = f"{MESSAGE}, count: {message_count}"
-            await asyncio.sleep(0.5)  # Small delay to simulate processing time
-            await characteristic.write(encode_message(response_message), response=True)
-            print(f"{IAM} sent response: {response_message}")
-            message_count += 1
+    data = await characteristic.read()
+    if data:
+        received_message = decode_message(data)
+        print(f"{IAM} received: {received_message}")
+        response_message = f"{MESSAGE}, count: {message_count}"
+        message_count += 1
+        await asyncio.sleep(0.5)  # Small delay to simulate processing time
+        await characteristic.write(encode_message(response_message), response=True)
+        print(f"{IAM} sent response: {response_message}")
 
 async def run_peripheral_mode():
     ble_service = aioble.Service(ble_svc_uuid)
