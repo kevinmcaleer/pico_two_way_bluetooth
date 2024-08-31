@@ -60,7 +60,7 @@ async def send_data_task(connection, characteristic):
         try:
             msg = encode_message(message)
             print(f"msg {msg}")
-            characteristic.write(msg, response=True)
+            characteristic.write(msg)
             
             print(f"{IAM} sent: {message}, received {response}")
         except Exception as e:
