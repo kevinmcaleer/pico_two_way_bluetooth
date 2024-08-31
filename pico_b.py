@@ -2,6 +2,7 @@ import aioble
 import bluetooth
 import asyncio
 import struct
+from sys import exit
 
 # Define UUIDs for the service and characteristic
 _SERVICE_UUID = bluetooth.UUID(0x1848)
@@ -9,6 +10,10 @@ _CHARACTERISTIC_UUID = bluetooth.UUID(0x2A6E)
 
 # IAM = "Central" # Change to 'Peripheral' or 'Central'
 IAM = "Peripheral"
+
+if IAM not in ['Peripheral','Central']:
+    print(f"IAM must be either Peripheral or Central")
+    exit()
 
 if IAM == "Central":
     IAM_SENDING_TO = "Peripheral"
@@ -43,13 +48,18 @@ async def send_data_task(connection, characteristic):
         if not connection:
             print("error - no connection in send data")
             break
+        
         if not characteristic:
             print("error no characteristic provided in send data")
             break
+        
         message = MESSAGE
-        print(f"sending {message.encode()}")
+        print(f"sending {message}")
+        
         try:
-            await characteristic.write(encode_message(message))
+            msg = encode_message(message)
+            print(f"msg {msg}")
+            await characteristic.write(msg)
             print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
@@ -137,12 +147,14 @@ async def run_central_mode():
         # Discover services
         try:
             service = await connection.service(ble_svc_uuid)
-        except:
+        except TimeoutError:
             print("Timed out discovering services/characteristics")
             continue
+        except Exception as e:
+            print(f"Error discovering services {e}")
         
         if not service:
-            print("no service found")
+            print(f"no service found {service}")
             await connection.disconnect()
             continue
         
@@ -157,7 +169,7 @@ async def run_central_mode():
             continue
         
         tasks = [
-            asyncio.create_task(send_data_task(connection, characteristic)),
+            asyncio.create_task(receive_data_task(connection, characteristic)),
 
         ]
         await asyncio.gather(*tasks)
@@ -180,3 +192,6 @@ async def main():
         await asyncio.gather(*tasks)
         
 asyncio.run(main())
+
+
+
