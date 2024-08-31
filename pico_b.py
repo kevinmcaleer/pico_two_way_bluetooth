@@ -71,7 +71,21 @@ async def ble_scan():
         async for result in scanner:
             if result.name() == ble_name and \
                ble_svc_uuid in results.services():
-                return result.device
+                   return result.device
+    return None
+
+    async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
+        async for result in scanner:
+
+            # See if it matches our name
+            if result.name() == "KevsRobots":
+                print("Found KevsRobots")
+                for item in result.services():
+                    print (item)
+                if _ENV_SENSE_UUID in result.services():
+                    print("Found Robot Remote Service")
+                    return result.device
+            
     return None
 
 async def run_central_mode():

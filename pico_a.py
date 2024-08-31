@@ -63,38 +63,47 @@ async def run_peripheral_mode():
 
 async def ble_scan():
     print(f"Scanning for BLE Beacon named {ble_name}...")
-    async with aioble.scan(
-        ble_scan_length,
-        interval_us=ble_interval,
-        window_us=ble_window,
-        active=True) as scanner:
+    
+    async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
         async for result in scanner:
-            if result.name() == ble_name and \
-               ble_svc_uuid in results.services():
-                return result.device
+            if result.name() == ble_name and ble_svc_uuid in result.services():
+                print(f"found {result.name()} with service uuid {ble_svc_uuid}")
+                return result
     return None
 
 async def run_central_mode():
     # Start scanning for a device with the matching service UUID
-    connection = await ble_scan()
+    device = await ble_scan()
+    
+    if device is None:
+        return
+    print(f"device is: {device}, name is {device.name()}")
 
-    print(f"{ble_name} connected to {connection.name()}")
+    try:
+        print(f"Connecting to {device.name()}")
+        connection = await device.device.connect()
+        
+    except asyncio.TimeoutError:
+        print("Timeout during connection")
+        return
+
+    print(f"{ble_name} connected to {connection}")
 
     # Discover services
-    services = await connection.discover_services()
-    for service in services:
-        if service.uuid == ble_svc_uuid:
-            characteristics = await service.discover_characteristics()
-            for characteristic in characteristics:
-                if characteristic.uuid == ble_characteristic_uuid:
-                    tasks = [
-                        asyncio.create_task(send_data_task(connection, characteristic)),
-                        asyncio.create_task(receive_data_task(connection, characteristic)),
-                    ]
-                    await asyncio.gather(*tasks)
+    service = await connection.service(ble_svc_uuid)
+    if service:
+        print(f"service: {service} {dir(service)}")
+        characteristic = await service.characteristic(ble_characteristic_uuid)
+     
+        print(f"characteristic: {characteristic}")
+        tasks = [
+            asyncio.create_task(send_data_task(connection, characteristic)),
+            asyncio.create_task(receive_data_task(connection, characteristic)),
+        ]
+        await asyncio.gather(*tasks)
 
-                await connection.disconnected()
-                print(f"{ble_name} disconnected from {result.name()}")
+        await connection.disconnected()
+        print(f"{ble_name} disconnected from {result.name()}")
 
 async def main():
     tasks = [
