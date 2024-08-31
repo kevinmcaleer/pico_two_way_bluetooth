@@ -1,6 +1,7 @@
 import aioble
 import bluetooth
 import asyncio
+import struct
 
 # Define UUIDs for the service and characteristic
 _SERVICE_UUID = bluetooth.UUID(0x1848)
@@ -18,11 +19,23 @@ ble_window = 30000
 
 MESSAGE = "Hello from Pico!"
 
+def encode_message(message):
+    return struct.pack("<h", message)
+
+def decode_message(message):
+    return struct.unpack("<h", message)
+
 async def send_data_task(connection, characteristic):
+    if connection is None:
+        print("error - no connection in send data")
+    if characteristic is None:
+        print("error no characteristic provided in send data")
+    else:
+        print(f"characteristic is {characteristic}")
     while True:
         message = MESSAGE
-        print(f"sending {message}")
-        await characteristic.write(message.encode())
+        print(f"sending {message.encode()}")
+        await characteristic.write(encode_message(message))
         print(f"{ble_name} sent: {message}")
         await asyncio.sleep(2)  # Wait for 2 seconds before sending the next message
 
@@ -30,7 +43,7 @@ async def receive_data_task(connection, characteristic):
     while True:
         try:
             data = await characteristic.notified()
-            print(f"{ble_name} received: {data.decode()}")
+            print(f"{ble_name} received: {decode_message(data)}")
         except asyncio.TimeoutError:
             print("Timeout waiting for data in {ble_name}.")
             break
@@ -90,8 +103,15 @@ async def run_central_mode():
 
     print(f"{ble_name} connected to {connection}")
 
+
     # Discover services
-    service = await connection.service(ble_svc_uuid)
+    try:
+        service = await connection.service(ble_svc_uuid)
+    except:
+        print("Timed out discovering services/characteristics")
+        return
+    if not service:
+        print("no service")
     if service:
         print(f"service: {service} {dir(service)}")
         characteristic = await service.characteristic(ble_characteristic_uuid)
@@ -104,7 +124,7 @@ async def run_central_mode():
         await asyncio.gather(*tasks)
 
         await connection.disconnected()
-        print(f"{ble_name} disconnected from {result.name()}")
+        print(f"{ble_name} disconnected from {device.name()}")
 
 async def main():
     tasks = [
