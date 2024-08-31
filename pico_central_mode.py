@@ -72,6 +72,7 @@ async def ble_scan():
     return None
 
 async def run_central_mode():
+    global message_count
     while True:
         device = await ble_scan()
         if not device:
@@ -99,6 +100,7 @@ async def run_central_mode():
 
             # Central sends a message to the peripheral
             request_message = "Requesting data"
+            message_count += 1
             await characteristic.write(encode_message(request_message))
             print(f"{IAM} sent: {request_message}")
 
