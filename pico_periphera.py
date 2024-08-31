@@ -54,20 +54,25 @@ async def run_peripheral_mode():
     print(f"{IAM} starting to advertise as {ble_name}")
 
     while True:
-        async with await aioble.advertise(
-            2000,  # Advertising interval in milliseconds
-            name=ble_name,
-            services=[_SERVICE_UUID]  # Pass the UUID, not the Service object itself
-        ) as connection:
-            print(f"{IAM} connected to another device: {connection.device}")
+        try:
+            async with await aioble.advertise(
+                2000,  # Advertising interval in milliseconds
+                name=ble_name,
+                services=[_SERVICE_UUID]  # Pass the UUID, not the Service object itself
+            ) as connection:
+                print(f"{IAM} connected to another device: {connection.device}")
 
-            # Loop to check for data being written to the characteristic
-            while connection.is_connected():
-                await handle_write_request(characteristic)
-                await asyncio.sleep(0.5)  # Small sleep to prevent tight looping
-            
-            print(f"{IAM} disconnected")
-            break
+                # Loop to check for data being written to the characteristic
+                while connection.is_connected():
+                    await handle_write_request(characteristic)
+                    await asyncio.sleep(0.5)  # Small sleep to prevent tight looping
+                
+                print(f"{IAM} disconnected")
+        except Exception as e:
+            print(f"Error during connection handling: {e}")
+        finally:
+            print("Restarting advertising after disconnection...")
+            await asyncio.sleep(1)  # Delay before re-advertising
 
 async def main():
     await run_peripheral_mode()
