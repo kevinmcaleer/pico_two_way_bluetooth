@@ -52,6 +52,8 @@ async def send_data_task(connection, characteristic):
         if not characteristic:
             print("error no characteristic provided in send data")
             break
+        else:
+            print(f"Characteristic is {characteristic}")
         
         message = MESSAGE
         print(f"sending {message}")
@@ -59,7 +61,7 @@ async def send_data_task(connection, characteristic):
         try:
             msg = encode_message(message)
             print(f"msg {msg}")
-            await characteristic.write(msg)
+            characteristic.write(msg)
             print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
@@ -145,13 +147,14 @@ async def run_central_mode():
 
 
         # Discover services
-        try:
-            service = await connection.service(ble_svc_uuid)
-        except TimeoutError:
-            print("Timed out discovering services/characteristics")
-            continue
-        except Exception as e:
-            print(f"Error discovering services {e}")
+        async with connection:
+            try:
+                service = await connection.service(ble_svc_uuid)
+            except (asyncio.TimeoutError, AttributeError):
+                print("Timed out discovering services/characteristics")
+                continue
+            except Exception as e:
+                print(f"Error discovering services {e}")
         
         if not service:
             print(f"no service found {service}")
