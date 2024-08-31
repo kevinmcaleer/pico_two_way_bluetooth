@@ -62,6 +62,9 @@ async def send_data_task(connection, characteristic):
             print(f"msg {msg}")
             characteristic.write(msg)
             
+            con, data = await characteristic.written()
+            print(f"data {data}")
+            
             print(f"{IAM} sent: {message}")
         except Exception as e:
             print(f"writing error {e}")
@@ -93,7 +96,9 @@ async def run_peripheral_mode():
         ble_service,
         ble_characteristic_uuid,
         read=True,
-        notify=True
+        notify=True,
+        write=True,
+        capture=True,
     )
     aioble.register_services(ble_service)
 
