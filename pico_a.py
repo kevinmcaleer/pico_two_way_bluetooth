@@ -77,7 +77,7 @@ async def receive_data_task(connection, characteristic):
     global message_count
     while True:
         try:
-            response = characteristic.write(encode_message("I got it"))
+            response = await characteristic.write(encode_message("I got it"))
             
             message_count += 1
             
